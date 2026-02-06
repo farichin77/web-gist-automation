@@ -1,0 +1,103 @@
+name: Web Automation CI/CD
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+          
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+      
+    - name: Run tests
+      env:
+        BASE_URL: ${{ secrets.BASE_URL }}
+        TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+        TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+      run: ./gradlew test
+      
+    - name: Generate test report timestamp
+      id: timestamp
+      run: echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT
+      
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-reports-${{ steps.timestamp.outputs.timestamp }}
+        path: |
+          test-reports/
+          build/reports/tests/
+          build/test-results/
+        retention-days: 30
+        
+    - name: Upload ExtentReports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: extent-reports-${{ steps.timestamp.outputs.timestamp }}
+        path: test-reports/*.html
+        retention-days: 30
+        
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: screenshots-${{ steps.timestamp.outputs.timestamp }}
+        path: test-reports/screenshots/
+        retention-days: 30
+        
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      if: always()
+      with:
+        path: all-artifacts
+        merge-multiple: true
+        
+    - name: Create download summary
+      if: always()
+      run: |
+        echo "## 📊 Test Reports Download Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All test artifacts have been uploaded and are available for download:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📁 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Reports**: \`test-reports-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **ExtentReports**: \`extent-reports-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Screenshots**: \`screenshots-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📥 How to Download:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Go to the **Actions** tab in your GitHub repository" >> $GITHUB_STEP_SUMMARY
+        echo "2. Click on the latest workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "3. Scroll down to the **Artifacts** section" >> $GITHUB_STEP_SUMMARY
+        echo "4. Click on any artifact to download it" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Direct Download Links:" >> $GITHUB_STEP_SUMMARY
+        echo "- [Test Reports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [ExtentReports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Screenshots](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

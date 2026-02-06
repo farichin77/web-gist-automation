@@ -1,0 +1,5 @@
+originalDescription,originalFilename,originalContent,newDescription,newFilename,newContent,expectedError
+Test Gist Original,test.txt,Original content,"","",,All Field Empty
+Test Gist Original,test.txt,Original content,Updated Test Gist 3,testing gist,,Empty content
+Test Gist Original,test.txt,Original content,,Updated content from automated test 4,Empty description and filename
+Test Gist Original,test.txt,Original content,Updated Test Gist 5,testing gist,Content with special chars !@#$%^&*(),Special characters in content

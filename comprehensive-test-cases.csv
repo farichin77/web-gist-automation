@@ -1,0 +1,13 @@
+ID,Title,TestData,ExpectedResult,Actual,Severity,Status
+TC001,Create Valid Secret Gist,"Description: Valid Test Gist, FileName: test.txt, Content: Test content",Gist created successfully,PASS,High,PASS
+TC002,Create Empty Description,"Description: , FileName: test.txt, Content: Test content",Gist created with empty description,PASS,Medium,PASS
+TC003,Create Empty Content,"Description: Negative Test: Empty Content, FileName: testing gist, Content: ",Error message for empty content,FAIL,High,FAIL
+TC004,Create Empty Description,"Description: , FileName: testing gist, Content: tes code content",Error message for empty description,FAIL,High,FAIL
+TC005,Create All Fields Empty,"Description: , FileName: , Content: ",Error message for all empty fields,FAIL,Critical,FAIL
+TC006,Create Special Characters,"Description: Test @#$%^&*(), FileName: test@#$^.txt, Content: Content !@#$%^&*()",Gist created with special characters,PASS,Medium,PASS
+TC007,Update Description,"Original: Test Gist, New: Updated Description",Description updated successfully,PASS,Medium,PASS
+TC008,Update Empty Description,"New Description: , Other fields filled",Error for empty description,FAIL,Medium,FAIL
+TC009,Update Empty Content,"New Content: , Other fields filled",Error for empty content,FAIL,Medium,FAIL
+TC010,Update Empty Description and Filename,"New Description: , New File Name: , Content: Updated",Error for empty description and filename,FAIL,High,FAIL
+TC011,Update Special Characters in Content,"New Content: Content with special chars !@#$%^&*()",Update with special characters,PASS,Medium,PASS
+TC012,Delete Valid Gist,"Gist ID: valid_id",Gist deleted successfully,PASS,High,PASS

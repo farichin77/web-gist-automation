@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+group = 'com'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.seleniumhq.selenium:selenium-java:4.27.0'
+    implementation 'org.testng:testng:7.10.2'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.9.2'
+    implementation 'io.github.cdimascio:java-dotenv:5.2.2'
+    implementation 'com.opencsv:opencsv:5.9'
+    implementation 'com.aventstack:extentreports:5.1.1'
+    implementation 'commons-codec:commons-codec:1.17.0'
+}
+
+test {
+    useTestNG {
+        suites "src/test/resources/testng.xml"
+        systemProperty "user.dir", System.getProperty("user.dir")
+    }
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+}
