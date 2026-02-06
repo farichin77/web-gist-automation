@@ -58,11 +58,12 @@ jobs:
         echo "=== Build Directory Structure ==="
         find build -type f -name "*.log" -o -name "*.xml" -o -name "*.txt" -o -name "*.html" | head -20 || echo "No build files found"
         
-        echo "=== Gradle Test Logs ==="
-        if [ -d "build/logs" ]; then
-          find build/logs -name "*.log" -exec echo "--- Log file: {} ---" \; -exec cat {} \;
+        echo "=== Test HTML Reports ==="
+        if [ -d "build/reports/tests" ]; then
+          find build/reports/tests -name "*.html" -exec echo "--- HTML Report: {} ---" \;
+          echo "Main test report available at: build/reports/tests/test/index.html"
         else
-          echo "build/logs directory not found"
+          echo "build/reports/tests directory not found"
         fi
         
         echo "=== TestNG Results ==="
@@ -77,6 +78,18 @@ jobs:
           find build/test-results -name "*.txt" -exec echo "--- Test Result: {} ---" \; -exec cat {} \;
         else
           echo "build/test-results directory not found"
+        fi
+      
+    - name: Display HTML report content
+      if: always()
+      run: |
+        echo "=== Test HTML Report Content ==="
+        if [ -f "build/reports/tests/test/index.html" ]; then
+          echo "Main test report exists, extracting key information:"
+          # Extract test summary from HTML report
+          grep -E "(failed|passed|skipped|total)" build/reports/tests/test/index.html | head -10 || echo "Could not extract summary from HTML"
+        else
+          echo "Main test report not found"
         fi
       
     - name: Generate test report timestamp
