@@ -55,14 +55,29 @@ jobs:
     - name: Display test logs
       if: always()
       run: |
+        echo "=== Build Directory Structure ==="
+        find build -type f -name "*.log" -o -name "*.xml" -o -name "*.txt" -o -name "*.html" | head -20 || echo "No build files found"
+        
         echo "=== Gradle Test Logs ==="
-        find build/logs -name "*.log" -exec echo "--- Log file: {} ---" \; -exec cat {} \;
+        if [ -d "build/logs" ]; then
+          find build/logs -name "*.log" -exec echo "--- Log file: {} ---" \; -exec cat {} \;
+        else
+          echo "build/logs directory not found"
+        fi
         
         echo "=== TestNG Results ==="
-        find build/test-results -name "*.xml" -exec echo "--- TestNG XML: {} ---" \; -exec cat {} \;
+        if [ -d "build/test-results" ]; then
+          find build/test-results -name "*.xml" -exec echo "--- TestNG XML: {} ---" \; -exec cat {} \;
+        else
+          echo "build/test-results directory not found"
+        fi
         
         echo "=== Individual Test Results ==="
-        find build/test-results -name "*.txt" -exec echo "--- Test Result: {} ---" \; -exec cat {} \;
+        if [ -d "build/test-results" ]; then
+          find build/test-results -name "*.txt" -exec echo "--- Test Result: {} ---" \; -exec cat {} \;
+        else
+          echo "build/test-results directory not found"
+        fi
       
     - name: Generate test report timestamp
       id: timestamp
