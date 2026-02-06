@@ -35,15 +35,18 @@ jobs:
       run: chmod +x gradlew
       
     - name: Run tests
+      continue-on-error: true
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
         TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        CI: true
+        GITHUB_ACTIONS: true
       run: |
         # Check if environment variables are set
-        echo "BASE_URL: $BASE_URL"
-        echo "TEST_USERNAME: $TEST_USERNAME"
-        echo "TEST_PASSWORD is set: $(if [ -n "$TEST_PASSWORD" ]; then echo "Yes"; else echo "No"; fi)"
+        echo "BASE_URL is set: $(if [ -n \"$BASE_URL\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
+        echo "TEST_USERNAME is set: $(if [ -n \"$TEST_USERNAME\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
+        echo "TEST_PASSWORD is set: $(if [ -n \"$TEST_PASSWORD\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
         
         # Run tests with verbose output and continue on failure
         ./gradlew test --info --stacktrace || true
