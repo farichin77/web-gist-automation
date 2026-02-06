@@ -35,7 +35,6 @@ jobs:
       run: chmod +x gradlew
       
     - name: Run tests
-      continue-on-error: true
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
         TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
@@ -48,12 +47,39 @@ jobs:
         echo "TEST_USERNAME is set: $(if [ -n \"$TEST_USERNAME\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
         echo "TEST_PASSWORD is set: $(if [ -n \"$TEST_PASSWORD\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
         
-        # Run tests with verbose output and continue on failure
-        ./gradlew test --info --stacktrace || true
+        # Run tests with verbose output (capture exit code for later)
+        set +e
+        ./gradlew test --info --stacktrace
+        echo "GRADLE_TEST_EXIT_CODE=$?" >> $GITHUB_ENV
+        set -e
         
         # Display test results
         echo "=== Test Results ==="
         find build/reports/tests -name "*.html" -exec echo "Report: {}" \;
+
+    - name: Validate tests executed
+      if: always()
+      run: |
+        if [ ! -d "build/test-results/test" ]; then
+          echo "No test results directory found: build/test-results/test"
+          exit 1
+        fi
+
+        TEST_XML_COUNT=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" | wc -l | tr -d ' ')
+        echo "Found TEST-*.xml files: $TEST_XML_COUNT"
+        if [ "$TEST_XML_COUNT" = "0" ]; then
+          echo "No TEST-*.xml files found. Tests likely did not execute."
+          exit 1
+        fi
+
+    - name: Fail workflow if tests failed
+      if: always()
+      run: |
+        echo "Gradle test exit code: ${GRADLE_TEST_EXIT_CODE:-missing}"
+        if [ "${GRADLE_TEST_EXIT_CODE:-0}" != "0" ]; then
+          echo "Tests failed. Marking workflow as failed (artifacts already uploaded)."
+          exit 1
+        fi
       
     - name: Display test logs
       if: always()
