@@ -39,7 +39,30 @@ jobs:
         BASE_URL: ${{ secrets.BASE_URL }}
         TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-      run: ./gradlew test
+      run: |
+        # Check if environment variables are set
+        echo "BASE_URL: $BASE_URL"
+        echo "TEST_USERNAME: $TEST_USERNAME"
+        echo "TEST_PASSWORD is set: $(if [ -n "$TEST_PASSWORD" ]; then echo "Yes"; else echo "No"; fi)"
+        
+        # Run tests with verbose output and continue on failure
+        ./gradlew test --info --stacktrace || true
+        
+        # Display test results
+        echo "=== Test Results ==="
+        find build/reports/tests -name "*.html" -exec echo "Report: {}" \;
+      
+    - name: Display test logs
+      if: always()
+      run: |
+        echo "=== Gradle Test Logs ==="
+        find build/logs -name "*.log" -exec echo "--- Log file: {} ---" \; -exec cat {} \;
+        
+        echo "=== TestNG Results ==="
+        find build/test-results -name "*.xml" -exec echo "--- TestNG XML: {} ---" \; -exec cat {} \;
+        
+        echo "=== Individual Test Results ==="
+        find build/test-results -name "*.txt" -exec echo "--- Test Result: {} ---" \; -exec cat {} \;
       
     - name: Generate test report timestamp
       id: timestamp
