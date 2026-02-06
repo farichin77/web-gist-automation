@@ -1,235 +1,46 @@
-name: Web Automation CI/CD
+name: CI
 
 on:
   push:
     branches: [ main, master, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, develop ]
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-          
-    - name: Make gradlew executable
-      run: chmod +x gradlew
-      
-    - name: Run tests
-      env:
-        BASE_URL: ${{ secrets.BASE_URL }}
-        TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
-        TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-        CI: true
-        GITHUB_ACTIONS: true
-      run: |
-        # Check if environment variables are set
-        echo "BASE_URL is set: $(if [ -n \"$BASE_URL\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
-        echo "TEST_USERNAME is set: $(if [ -n \"$TEST_USERNAME\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
-        echo "TEST_PASSWORD is set: $(if [ -n \"$TEST_PASSWORD\" ]; then echo \"Yes\"; else echo \"No\"; fi)"
-        
-        # Run tests with verbose output (capture exit code for later)
-        set +e
-        ./gradlew test --info --stacktrace
-        echo "GRADLE_TEST_EXIT_CODE=$?" >> $GITHUB_ENV
-        set -e
-        
-        # Display test results
-        echo "=== Test Results ==="
-        find build/reports/tests -name "*.html" -exec echo "Report: {}" \;
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Validate tests executed
-      if: always()
-      run: |
-        if [ ! -d "build/test-results/test" ]; then
-          echo "No test results directory found: build/test-results/test"
-          exit 1
-        fi
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
 
-        TEST_XML_COUNT=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" | wc -l | tr -d ' ')
-        echo "Found TEST-*.xml files: $TEST_XML_COUNT"
-        if [ "$TEST_XML_COUNT" = "0" ]; then
-          echo "No TEST-*.xml files found. Tests likely did not execute."
-          exit 1
-        fi
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-    - name: Fail workflow if tests failed
-      if: always()
-      run: |
-        echo "Gradle test exit code: ${GRADLE_TEST_EXIT_CODE:-missing}"
-        if [ "${GRADLE_TEST_EXIT_CODE:-0}" != "0" ]; then
-          echo "Tests failed. Marking workflow as failed (artifacts already uploaded)."
-          exit 1
-        fi
-      
-    - name: Display test logs
-      if: always()
-      run: |
-        echo "=== Build Directory Structure ==="
-        find build -type f -name "*.log" -o -name "*.xml" -o -name "*.txt" -o -name "*.html" | head -20 || echo "No build files found"
-        
-        echo "=== Test HTML Reports ==="
-        if [ -d "build/reports/tests" ]; then
-          find build/reports/tests -name "*.html" -exec echo "--- HTML Report: {} ---" \;
-          echo "Main test report available at: build/reports/tests/test/index.html"
-        else
-          echo "build/reports/tests directory not found"
-        fi
-        
-        echo "=== TestNG Results ==="
-        if [ -d "build/test-results" ]; then
-          find build/test-results -name "*.xml" -exec echo "--- TestNG XML: {} ---" \; -exec cat {} \;
-        else
-          echo "build/test-results directory not found"
-        fi
-        
-        echo "=== Individual Test Results ==="
-        if [ -d "build/test-results" ]; then
-          find build/test-results -name "*.txt" -exec echo "--- Test Result: {} ---" \; -exec cat {} \;
-        else
-          echo "build/test-results directory not found"
-        fi
+      - name: Run tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          CI: true
+          GITHUB_ACTIONS: true
+        run: ./gradlew test --info --stacktrace
 
-    - name: Print failing tests summary
-      if: always()
-      run: |
-        echo "=== Failing Tests Summary (from TEST-*.xml) ==="
-        if [ -d "build/test-results/test" ]; then
-          XMLS=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" || true)
-          if [ -z "$XMLS" ]; then
-            echo "No TEST-*.xml found"
-            exit 0
-          fi
-
-          for f in $XMLS; do
-            echo "--- File: $f ---"
-            # Print testcase lines that contain failure/error + their messages (keeps logs readable)
-            grep -nE "<(testcase|failure|error)" "$f" | head -200 || true
-          done
-        else
-          echo "build/test-results/test directory not found"
-        fi
-
-        # Also write a short summary into the GitHub Actions Summary
-        echo "## Test Failure Summary" >> $GITHUB_STEP_SUMMARY
-        if [ -d "build/test-results/test" ]; then
-          XMLS=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" || true)
-          if [ -z "$XMLS" ]; then
-            echo "No TEST-*.xml found." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Showing first failure/error lines from TEST-*.xml:" >> $GITHUB_STEP_SUMMARY
-            echo "\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-            for f in $XMLS; do
-              echo "FILE: $f" >> $GITHUB_STEP_SUMMARY
-              grep -nE "<(testcase|failure|error)" "$f" | head -80 >> $GITHUB_STEP_SUMMARY || true
-              echo "" >> $GITHUB_STEP_SUMMARY
-            done
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          fi
-        else
-          echo "No build/test-results/test directory found." >> $GITHUB_STEP_SUMMARY
-        fi
-      
-    - name: Display HTML report content
-      if: always()
-      run: |
-        echo "=== Test HTML Report Content ==="
-        if [ -f "build/reports/tests/test/index.html" ]; then
-          echo "Main test report exists, extracting key information:"
-          # Extract test summary from HTML report
-          grep -E "(failed|passed|skipped|total|classes|tests)" build/reports/tests/test/index.html | head -20 || echo "Could not extract summary from HTML"
-          
-          echo "=== Full HTML Content (first 200 lines) ==="
-          head -200 build/reports/tests/test/index.html || echo "Could not read HTML content"
-          
-          echo "=== TestNG XML Results ==="
-          if [ -f "build/test-results/test/TEST-gist.tests.CreateGistTest.xml" ]; then
-            echo "TestNG XML found:"
-            cat build/test-results/test/TEST-gist.tests.CreateGistTest.xml
-          else
-            echo "TestNG XML not found, listing all XML files:"
-            find build/test-results -name "*.xml" -exec echo "File: {}" \; -exec cat {} \;
-          fi
-        else
-          echo "Main test report not found"
-        fi
-      
-    - name: Generate test report timestamp
-      id: timestamp
-      run: echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT
-      
-    - name: Upload test reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-reports-${{ steps.timestamp.outputs.timestamp }}
-        path: |
-          test-reports/
-          build/reports/tests/
-          build/test-results/
-        retention-days: 30
-        
-    - name: Upload ExtentReports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: extent-reports-${{ steps.timestamp.outputs.timestamp }}
-        path: test-reports/*.html
-        retention-days: 30
-        
-    - name: Upload screenshots
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: screenshots-${{ steps.timestamp.outputs.timestamp }}
-        path: test-reports/screenshots/
-        retention-days: 30
-        
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      if: always()
-      with:
-        path: all-artifacts
-        merge-multiple: true
-        
-    - name: Create download summary
-      if: always()
-      run: |
-        echo "## 📊 Test Reports Download Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "All test artifacts have been uploaded and are available for download:" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📁 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
-        echo "- **Test Reports**: \`test-reports-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
-        echo "- **ExtentReports**: \`extent-reports-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
-        echo "- **Screenshots**: \`screenshots-${{ steps.timestamp.outputs.timestamp }}\`" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📥 How to Download:" >> $GITHUB_STEP_SUMMARY
-        echo "1. Go to the **Actions** tab in your GitHub repository" >> $GITHUB_STEP_SUMMARY
-        echo "2. Click on the latest workflow run" >> $GITHUB_STEP_SUMMARY
-        echo "3. Scroll down to the **Artifacts** section" >> $GITHUB_STEP_SUMMARY
-        echo "4. Click on any artifact to download it" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔗 Direct Download Links:" >> $GITHUB_STEP_SUMMARY
-        echo "- [Test Reports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-        echo "- [ExtentReports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-        echo "- [Screenshots](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+      - name: Upload reports (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: |
+            build/reports/tests/
+            build/test-results/
+            test-reports/
+          retention-days: 14
