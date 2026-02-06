@@ -4,16 +4,37 @@
     <listeners>
         <listener class-name="gist.listeners.TestListener"/>
     </listeners>
-    
-    <!-- Chrome Tests Only -->
+
+    <!-- Chrome Tests -->
     <test name="Chrome Tests">
         <parameter name="browser" value="chrome"/>
         <classes>
-            <class name="gist.tests.CreateGistTest">
-                <methods>
-                    <include name="CreateSecretGistTest"/>
-                </methods>
-            </class>
+            <class name="gist.tests.CreateGistTest"/>
+            <class name="gist.tests.UpdateGistTest"/>
+            <class name="gist.tests.DeleteGistTest"/>
+            <class name="gist.tests.SeeListOfGist"/>
+        </classes>
+    </test>
+
+    <!-- Firefox Tests -->
+    <test name="Firefox Tests">
+        <parameter name="browser" value="firefox"/>
+        <classes>
+            <class name="gist.tests.CreateGistTest"/>
+            <class name="gist.tests.UpdateGistTest"/>
+            <class name="gist.tests.DeleteGistTest"/>
+            <class name="gist.tests.SeeListOfGist"/>
+        </classes>
+    </test>
+
+    <!-- Edge Tests -->
+    <test name="Edge Tests">
+        <parameter name="browser" value="edge"/>
+        <classes>
+            <class name="gist.tests.CreateGistTest"/>
+            <class name="gist.tests.UpdateGistTest"/>
+            <class name="gist.tests.DeleteGistTest"/>
+            <class name="gist.tests.SeeListOfGist"/>
         </classes>
     </test>
 </suite>
