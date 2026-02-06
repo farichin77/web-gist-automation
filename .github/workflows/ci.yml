@@ -108,6 +108,46 @@ jobs:
         else
           echo "build/test-results directory not found"
         fi
+
+    - name: Print failing tests summary
+      if: always()
+      run: |
+        echo "=== Failing Tests Summary (from TEST-*.xml) ==="
+        if [ -d "build/test-results/test" ]; then
+          XMLS=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" || true)
+          if [ -z "$XMLS" ]; then
+            echo "No TEST-*.xml found"
+            exit 0
+          fi
+
+          for f in $XMLS; do
+            echo "--- File: $f ---"
+            # Print testcase lines that contain failure/error + their messages (keeps logs readable)
+            grep -nE "<(testcase|failure|error)" "$f" | head -200 || true
+          done
+        else
+          echo "build/test-results/test directory not found"
+        fi
+
+        # Also write a short summary into the GitHub Actions Summary
+        echo "## Test Failure Summary" >> $GITHUB_STEP_SUMMARY
+        if [ -d "build/test-results/test" ]; then
+          XMLS=$(find build/test-results/test -maxdepth 1 -name "TEST-*.xml" || true)
+          if [ -z "$XMLS" ]; then
+            echo "No TEST-*.xml found." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Showing first failure/error lines from TEST-*.xml:" >> $GITHUB_STEP_SUMMARY
+            echo "\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+            for f in $XMLS; do
+              echo "FILE: $f" >> $GITHUB_STEP_SUMMARY
+              grep -nE "<(testcase|failure|error)" "$f" | head -80 >> $GITHUB_STEP_SUMMARY || true
+              echo "" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "No build/test-results/test directory found." >> $GITHUB_STEP_SUMMARY
+        fi
       
     - name: Display HTML report content
       if: always()
