@@ -9,7 +9,11 @@
     <test name="Chrome Tests">
         <parameter name="browser" value="chrome"/>
         <classes>
-            <class name="gist.tests.CreateGistTest"/>
+            <class name="gist.tests.CreateGistTest">
+                <methods>
+                    <include name="CreateSecretGistTest"/>
+                </methods>
+            </class>
         </classes>
     </test>
 </suite>
