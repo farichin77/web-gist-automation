@@ -87,7 +87,19 @@ jobs:
         if [ -f "build/reports/tests/test/index.html" ]; then
           echo "Main test report exists, extracting key information:"
           # Extract test summary from HTML report
-          grep -E "(failed|passed|skipped|total)" build/reports/tests/test/index.html | head -10 || echo "Could not extract summary from HTML"
+          grep -E "(failed|passed|skipped|total|classes|tests)" build/reports/tests/test/index.html | head -20 || echo "Could not extract summary from HTML"
+          
+          echo "=== Full HTML Content (first 200 lines) ==="
+          head -200 build/reports/tests/test/index.html || echo "Could not read HTML content"
+          
+          echo "=== TestNG XML Results ==="
+          if [ -f "build/test-results/test/TEST-gist.tests.CreateGistTest.xml" ]; then
+            echo "TestNG XML found:"
+            cat build/test-results/test/TEST-gist.tests.CreateGistTest.xml
+          else
+            echo "TestNG XML not found, listing all XML files:"
+            find build/test-results -name "*.xml" -exec echo "File: {}" \; -exec cat {} \;
+          fi
         else
           echo "Main test report not found"
         fi
